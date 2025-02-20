@@ -34,11 +34,20 @@ py -m consumers.consumer_moss
 ```shell
 Terminal 1
 
+wsl
+cd ~/kafka
+bin/zookeeper-server-start.sh config/zookeeper.properties
+
 PS C:\Users\nolan> wsl
 moss@InspironNolan:~$ cd ~/kafka
 moss@InspironNolan:~/kafka$ bin/zookeeper-server-start.sh config/zookeeper.properties
 
 Terminal 2
+
+wsl
+cd ~/kafka
+bin/kafka-server-start.sh config/server.properties
+
 
 PS C:\Users\nolan> wsl
 moss@InspironNolan:/mnt/c/Users/nolan$ cd ~/kafka
