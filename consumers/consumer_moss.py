@@ -48,7 +48,7 @@ def update_chart():
     ax.plot(dates, close_prices, marker='o', linestyle='-', color="blue")
 
     ax.set_xlabel("Date")
-    ax.set_ylabel("Price change from open to close")
+    ax.set_ylabel("Price at close")
     ax.set_title("Daily close price for S&P 500")
 
     plt.xticks(rotation=45, ha="right")
@@ -72,7 +72,7 @@ def process_message(msg_value):
         if isinstance(msg_value, str):
             message_dict = json.loads(msg_value)  # Only decode if it's a string
         else:
-            message_dict = msg_value  # Already a dictionary
+            message_dict = msg_value  
 
         date_value = message_dict.get("date", "unknown")
         close_last_value = message_dict.get("close_last", 0.0)
@@ -82,7 +82,7 @@ def process_message(msg_value):
             close_prices.append(close_last_value)  # FIXED list name
 
             # Keep only the last 100 data points
-            if len(dates) > 100:
+            if len(dates) > 30:
                 dates.pop(0)
                 close_prices.pop(0)
 
