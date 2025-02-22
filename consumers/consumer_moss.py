@@ -11,6 +11,8 @@ from utils.utils_consumer import create_kafka_consumer
 from utils.utils_logger import logger
 from utils.utils_producer import verify_services, is_topic_available
 
+import matplotlib.pyplot as plt
+
 # Ensure the parent directory is in sys.path
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
@@ -18,17 +20,79 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 STOCK_DATA_FILE = r"C:\Users\nolan\Documents\Streamin Data NWMU\project-06-moss\stock_data.json"
 
 
+
+
+#####################################
+# Create Chart
+#####################################
+
+
+# Initialize Matplotlib for live updates
+fig, ax = plt.subplots()
+plt.ion()  # Turn on interactive mode
+
+
+# Initialize lists to store timestamps and sentiment scores
+dates = []
+close_prices = []
+
+
+"""For the close_last and date data I want to create a line chart that holds the 
+date as the x axis and the close_last as the y axis"""
+
+def update_chart():
+    """Update the live line chart with sentiment trends."""
+    ax.clear()
+
+    # Plot sentiment over time
+    ax.plot(dates, close_prices, marker='o', linestyle='-', color="blue")
+
+    ax.set_xlabel("Date")
+    ax.set_ylabel("Price change from open to close")
+    ax.set_title("Daily close price for S&P 500")
+
+    plt.xticks(rotation=45, ha="right")
+    plt.tight_layout()
+    plt.draw()
+    plt.pause(0.01)
+
+
+
+
 #####################################
 # Store Stock Data
 #####################################
 
-def process_message(msg_value: dict):
+def process_message(msg_value):
     """Process a Kafka message: validate and store stock data."""
     try:
         logger.info(f"Processing stock data: {msg_value}")
-        store_stock_data(msg_value)
+
+        # Ensure msg_value is a dictionary
+        if isinstance(msg_value, str):
+            message_dict = json.loads(msg_value)  # Only decode if it's a string
+        else:
+            message_dict = msg_value  # Already a dictionary
+
+        date_value = message_dict.get("date", "unknown")
+        close_last_value = message_dict.get("close_last", 0.0)
+
+        if date_value != "unknown":
+            dates.append(date_value)  # FIXED list name
+            close_prices.append(close_last_value)  # FIXED list name
+
+            # Keep only the last 100 data points
+            if len(dates) > 100:
+                dates.pop(0)
+                close_prices.pop(0)
+
+            update_chart()
+
+        store_stock_data(message_dict)
+
     except Exception as e:
         logger.error(f"Error processing message: {e}")
+
 
 
 def store_stock_data(message: dict):
@@ -39,16 +103,13 @@ def store_stock_data(message: dict):
         message (dict): The stock data message.
     """
     try:
-        stock_data = []
-        
         # Load existing data if file exists
         if os.path.exists(STOCK_DATA_FILE):
             with open(STOCK_DATA_FILE, "r", encoding="utf-8") as file:
-                try:
-                    stock_data = json.load(file)
-                except json.JSONDecodeError:
-                    logger.warning("JSON file was empty or corrupted. Resetting data.")
-        
+                stock_data = json.load(file)
+        else:
+            stock_data = []
+
         # Append new message
         stock_data.append(message)
 
@@ -64,15 +125,9 @@ def store_stock_data(message: dict):
 #####################################
 # Process Messages from Kafka
 #####################################
-
 def consume_messages_from_kafka(topic: str, kafka_url: str, group: str):
     """
     Consume new messages from Kafka topic and store them in the JSON file.
-
-    Args:
-    - topic (str): Kafka topic to consume messages from.
-    - kafka_url (str): Kafka broker address.
-    - group (str): Consumer group ID for Kafka.
     """
     logger.info("Step 1. Verify Kafka Services.")
     try:
@@ -86,7 +141,7 @@ def consume_messages_from_kafka(topic: str, kafka_url: str, group: str):
         consumer: KafkaConsumer = create_kafka_consumer(
             topic,
             group,
-            value_deserializer_provided=lambda x: json.loads(x.decode("utf-8")),
+            value_deserializer=lambda x: json.loads(x.decode("utf-8")),  # FIXED
         )
     except Exception as e:
         logger.error(f"ERROR: Could not create Kafka consumer: {e}")
@@ -104,16 +159,15 @@ def consume_messages_from_kafka(topic: str, kafka_url: str, group: str):
 
     try:
         for message in consumer:
-            msg_value = message.value  # Already deserialized JSON (from value_deserializer)
+            msg_value = message.value  # Already deserialized JSON
             logger.info(f"Raw Message Received: {msg_value}")
-
-            process_message(msg_value)  
+            process_message(msg_value)
     except KeyboardInterrupt:
         logger.warning("Consumer interrupted by user.")
     except Exception as e:
         logger.error(f"ERROR in message consumption: {e}")
     finally:
-        consumer.close()  # Ensure Kafka consumer shuts down properly
+        consumer.close()
         logger.info("Consumer shutting down.")
 
 

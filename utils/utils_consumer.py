@@ -8,7 +8,6 @@ Consumers subscribe to a topic and read messages from the Kafka topic.
 # Imports
 #####################################
 
-
 # Import external packages
 from kafka import KafkaConsumer
 
@@ -23,35 +22,36 @@ from .utils_logger import logger
 
 
 def create_kafka_consumer(
-    topic_provided: str = None,
-    group_id_provided: str = None,
-    value_deserializer_provided=None,
+    topic: str = None,
+    group_id: str = None,
+    value_deserializer=None,
 ):
     """
     Create and return a Kafka consumer instance.
 
     Args:
-        topic_provided (str): The Kafka topic to subscribe to. Defaults to the environment variable or default.
-        group_id_provided (str): The consumer group ID. Defaults to the environment variable or default.
-        value_deserializer_provided (callable, optional): Function to deserialize message values.
+        topic (str): The Kafka topic to subscribe to.
+        group_id (str): The consumer group ID.
+        value_deserializer (callable, optional): Function to deserialize message values.
 
     Returns:
         KafkaConsumer: Configured Kafka consumer instance.
     """
     kafka_broker = get_kafka_broker_address()
-    topic = topic_provided
-    consumer_group_id = group_id_provided or "test_group"
-    logger.info(
-        f"Creating Kafka consumer. Topic='{topic}' and group ID='{group_id_provided}'."
-    )
+    
+    if not topic:
+        raise ValueError("Kafka topic must be specified.")
+
+    consumer_group_id = group_id or "test_group"
+    logger.info(f"Creating Kafka consumer. Topic='{topic}' and group ID='{consumer_group_id}'.")
+
     logger.debug(f"Kafka broker: {kafka_broker}")
 
     try:
         consumer = KafkaConsumer(
             topic,
             group_id=consumer_group_id,
-            value_deserializer=value_deserializer_provided
-            or (lambda x: x.decode("utf-8")),
+            value_deserializer=value_deserializer if value_deserializer else lambda x: json.loads(x.decode("utf-8")),
             bootstrap_servers=kafka_broker,
             auto_offset_reset="earliest",
             enable_auto_commit=True,

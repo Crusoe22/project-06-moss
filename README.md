@@ -20,7 +20,7 @@ py -m pip install -r requirements.txt
 
 ```shell
 .venv\Scripts\activate
-py -m producers.producer_case
+py -m producers.producer_moss
 
 
 
