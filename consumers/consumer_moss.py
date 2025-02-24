@@ -101,7 +101,13 @@ def store_stock_data(message: dict):
 
     Args:
         message (dict): The stock data message.
+
     """
+    # Clear the JSON file when the script starts
+    with open(STOCK_DATA_FILE, "w", encoding="utf-8") as file:
+        json.dump([], file)
+    logger.info("Stock data file cleared.") # log clearing
+
     try:
         # Load existing data if file exists
         if os.path.exists(STOCK_DATA_FILE):
